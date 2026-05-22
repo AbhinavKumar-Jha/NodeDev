@@ -1,6 +1,6 @@
 # Visit
 
-Try Out : [NodeDev](https://nodedev.vercel.app/) using `email` : `aditya@email.com` and `password` : `aditya@01`.
+Try Out : [NodeDev](https://nodedev.vercel.app/) 
 
 # React + Vite
 
