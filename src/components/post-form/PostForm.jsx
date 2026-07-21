@@ -1,84 +1,101 @@
-import React , {useCallback} from 'react'
-import { useForm } from 'react-hook-form'
-import {Button , Input, Select, RTE} from '../index.js'
-import appwriteService from "../../appwrite/config.service"
-import { useNavigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import React, { useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { Button, Input, Select, RTE } from '../index.js';
+import appwriteService from "../../appwrite/config.service"; // Ensure file name matches your project
+import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
-export default function PostForm({post}) {
-    const userData = useSelector((state) => state.auth.userData)
-    console.log(userData)
-    const {register, handleSubmit, watch, setValue, control, getValues} = useForm({
-        defaultValues:{
+export default function PostForm({ post }) {
+    const userData = useSelector((state) => state.auth.userData);
+
+    const { register, handleSubmit, watch, setValue, control, getValues } = useForm({
+        defaultValues: {
             title: post?.title || "",
-            slug : post?.$id || "",
-            content : post?.content || "",
-            status : post?.status || "active",
-            // userId: userData?.$id || ""
+            slug: post?.$id || "",
+            content: post?.content || "",
+            status: post?.status || "active",
         },
-    })
+    });
 
-    const navigate = useNavigate()
+    const navigate = useNavigate();
 
-    const submit = async (data)=> {
-        if(post) {
-            const file = data.image[0] ? await appwriteService.uploadFile(data.image[0]) : null
-            if(file){
-                appwriteService.deleteFile(post.featuredImage)
-                console.log("file created")
-            }
-            const dbPost = await appwriteService.updatePost(
-                post.$id, {
-                    ...data,
-                    featuredImage: file ? file.$id : undefined,
+    const submit = async (data) => {
+        try {
+            if (post) {
+                // EDIT MODE
+                const file = data.image?.[0] ? await appwriteService.uploadFile(data.image[0]) : null;
+
+                if (file && post.featuredImage) {
+                    await appwriteService.deleteFile(post.featuredImage);
                 }
-            )
-            console.log("post updated")
-            if(dbPost) {
-                console.log("navigating to post")
-                navigate(`/post/${dbPost.$id}`)
-            }
-        }else {
-            const file = data.image[0] ? await appwriteService.uploadFile(data.image[0]) : null
 
-            if(file){
-                const fileId = file.$id
-                data.featuredImage = fileId
-                const dbPost = await appwriteService.createPost({
-                    ...data,
-                    userId :userData.$id,
-                })
-                if(dbPost){
-                    navigate(`/post/${dbPost.$id}`)
+                const dbPost = await appwriteService.updatePost(
+                    post.$id,
+                    {
+                        ...data,
+                        featuredImage: file ? file.$id : post.featuredImage,
+                    }
+                );
+
+                if (dbPost) {
+                    navigate(`/post/${dbPost.$id}`);
+                }
+            } else {
+                // CREATE MODE
+                const imageFile = data.image?.[0] ? data.image[0] : null;
+                if (!imageFile) {
+                    alert("Please select a featured image.");
+                    return;
+                }
+
+                const file = await appwriteService.uploadFile(imageFile);
+
+                if (file) {
+                    const fileId = file.$id;
+                    data.featuredImage = fileId;
+
+                    const dbPost = await appwriteService.createPost({
+                        ...data,
+                        slug: data.slug || slugTransform(data.title),
+                        userId: userData.$id,
+                    });
+
+                    if (dbPost) {
+                        navigate(`/post/${dbPost.$id}`);
+                    }
                 }
             }
+        } catch (error) {
+            console.error("PostForm :: submit :: error", error);
         }
-    }
+    };
 
     const slugTransform = useCallback((value) => {
-        if(value && typeof value === "string"){
-            return value.trim()
-            .toLowerCase()
-            .replace(/[^a-zA-Z\d\s]+/g, "-")
-            .replace(/\s/g, "-");
-        } return ''
-    })
+        if (value && typeof value === "string") {
+            return value
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-zA-Z\d\s]+/g, "-")
+                .replace(/\s+/g, "-");
+        }
+        return '';
+    }, []);
 
     React.useEffect(() => {
-        const subscription = watch((value, {name}) => {
-            if(name === 'title'){
-                setValue('slug', slugTransform(value.title
-                    ,{shouldValidate: true}))
+        const subscription = watch((value, { name }) => {
+            if (name === 'title') {
+                // FIXED: Option object passed to setValue correctly as 3rd parameter
+                setValue('slug', slugTransform(value.title), { shouldValidate: true });
             }
-        })
+        });
 
         return () => {
-            //to optimise useEffect
-            subscription.unsubscribe()
-        }
-    }, [watch, slugTransform, setValue])
-  return (
-    <form onSubmit={handleSubmit(submit)} className="flex flex-wrap p-4">
+            subscription.unsubscribe();
+        };
+    }, [watch, slugTransform, setValue]);
+
+    return (
+        <form onSubmit={handleSubmit(submit)} className="flex flex-wrap p-4">
             <div className="w-2/3 px-2">
                 <Input
                     label="Title :"
@@ -125,5 +142,5 @@ export default function PostForm({post}) {
                 </Button>
             </div>
         </form>
-  )
+    );
 }
