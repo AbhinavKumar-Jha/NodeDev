@@ -135,18 +135,21 @@ export class Service {
     }
 
     // Storage methods
-    async uploadFile(file) {
-        try {
-            return await this.bucket.createFile(
-                this.getBucketId(),
-                ID.unique(),
-                file
-            );
-        } catch (error) {
-            console.error("Appwrite service :: uploadFile :: error", error);
-            return false;
-        }
+   async uploadFile(file) {
+    try {
+        const bucketId = "6a5f198a001f70879fd9"; // Hardcode bucket ID directly to bypass config bugs
+        console.log("Uploading file to bucketId:", bucketId, "with endpoint:", this.client.config.endpoint);
+
+        return await this.bucket.createFile(
+            bucketId,
+            ID.unique(),
+            file
+        );
+    } catch (error) {
+        console.error("Appwrite service :: uploadFile :: error", error);
+        return false;
     }
+}
 
     async deleteFile(fileId) {
         try {
