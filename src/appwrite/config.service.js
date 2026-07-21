@@ -23,7 +23,7 @@ export class Service {
         this.bucket = new Storage(this.client);
     }
 
-    // Helper method to safely resolve IDs with hardcoded fallback defaults
+    // Helper methods to safely resolve IDs with hardcoded fallback defaults
     getDatabaseId() {
         return (conf.appwriteDatabaseId && conf.appwriteDatabaseId !== "undefined")
             ? conf.appwriteDatabaseId
@@ -58,6 +58,7 @@ export class Service {
             );
         } catch (error) {
             console.error("Appwrite service :: createPost :: error", error);
+            return false;
         }
     }
 
@@ -76,6 +77,7 @@ export class Service {
             );
         } catch (error) {
             console.error("Appwrite service :: updatePost :: error", error);
+            return false;
         }
     }
 
@@ -135,21 +137,26 @@ export class Service {
     }
 
     // Storage methods
-   async uploadFile(file) {
-    try {
-        const bucketId = "6a5f198a001f70879fd9"; // Hardcode bucket ID directly to bypass config bugs
-        console.log("Uploading file to bucketId:", bucketId, "with endpoint:", this.client.config.endpoint);
+    async uploadFile(file) {
+        try {
+            // Handle React Hook Form FileList array (e.g., data.image[0])
+            const actualFile = (file && file[0]) ? file[0] : file;
 
-        return await this.bucket.createFile(
-            bucketId,
-            ID.unique(),
-            file
-        );
-    } catch (error) {
-        console.error("Appwrite service :: uploadFile :: error", error);
-        return false;
+            if (!actualFile) {
+                console.error("Appwrite service :: uploadFile :: No valid file provided");
+                return false;
+            }
+
+            return await this.bucket.createFile(
+                this.getBucketId(),
+                ID.unique(),
+                actualFile
+            );
+        } catch (error) {
+            console.error("Appwrite service :: uploadFile :: error", error);
+            return false;
+        }
     }
-}
 
     async deleteFile(fileId) {
         try {
@@ -166,7 +173,8 @@ export class Service {
 
     getFilePreview(fileId) {
         try {
-            return this.bucket.getFileView(
+            if (!fileId) return "";
+            return this.bucket.getFilePreview(
                 this.getBucketId(),
                 fileId
             );
