@@ -21,6 +21,7 @@ export default function RTE({
             initialValue: defaultValue,
             height: 500,
             menubar: true,
+            promotion: false,
             plugins: [
                 "image",
                 "advlist",
