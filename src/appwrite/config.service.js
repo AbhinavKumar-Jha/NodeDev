@@ -169,20 +169,18 @@ export class Service {
         }
     }
 
-   getFilePreview(fileId) {
-    try {
-        if (!fileId || fileId === "undefined" || fileId === "null") return "";
-        
-        // Appwrite Storage SDK preview method
-        const result = this.bucket.getFilePreview(
-            this.getBucketId(),
-            fileId
-        );
-
-        return typeof result === "string" ? result : result.href;
-    } catch (error) {
-        console.error("Appwrite service :: getFilePreview :: error", error);
-        return "";
+    getFilePreview(fileId) {
+        try {
+            if (!fileId) return "";
+            const previewUrl = this.bucket.getFilePreview(
+                this.getBucketId(),
+                fileId
+            );
+            return typeof previewUrl === "string" ? previewUrl : previewUrl.href;
+        } catch (error) {
+            console.error("Appwrite service :: getFilePreview :: error", error);
+            return "";
+        }
     }
 }
 
