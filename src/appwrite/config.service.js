@@ -1,149 +1,188 @@
-import React, { useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { Button, Input, Select, RTE } from '../index.js';
-import appwriteService from "../../appwrite/config.service";
-import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import conf from '../conf/config.js';
+import { Client, ID, Databases, Storage, Query } from "appwrite";
 
-export default function PostForm({ post }) {
-    const userData = useSelector((state) => state.auth.userData);
+export class Service {
+    client = new Client();
+    databases;
+    bucket;
 
-    const { register, handleSubmit, watch, setValue, control, getValues } = useForm({
-        defaultValues: {
-            title: post?.title || "",
-            slug: post?.$id || "",
-            content: post?.content || "",
-            status: post?.status || "active",
-        },
-    });
+    constructor() {
+        const endpoint = (conf.appwriteUrl && conf.appwriteUrl !== "undefined")
+            ? conf.appwriteUrl
+            : "https://nyc.cloud.appwrite.io/v1";
 
-    const navigate = useNavigate();
+        const projectId = (conf.appwriteProjectId && conf.appwriteProjectId !== "undefined")
+            ? conf.appwriteProjectId
+            : "6a5f15af00289a0a1221";
 
-    const submit = async (data) => {
+        this.client
+            .setEndpoint(endpoint)
+            .setProject(projectId);
+
+        this.databases = new Databases(this.client);
+        this.bucket = new Storage(this.client);
+    }
+
+    getDatabaseId() {
+        return (conf.appwriteDatabaseId && conf.appwriteDatabaseId !== "undefined")
+            ? conf.appwriteDatabaseId
+            : "6a5f177f001dc733cf16";
+    }
+
+    getCollectionId() {
+        return (conf.appwriteCollectionId && conf.appwriteCollectionId !== "undefined")
+            ? conf.appwriteCollectionId
+            : "posts";
+    }
+
+    getBucketId() {
+        return (conf.appwriteBucketId && conf.appwriteBucketId !== "undefined")
+            ? conf.appwriteBucketId
+            : "6a5f198a001f70879fd9";
+    }
+
+    async createPost({ title, slug, content, featuredImage, status, userId }) {
         try {
-            if (post) {
-                // UPDATE EXISTING POST
-                let file = null;
-                if (data.image?.[0]) {
-                    file = await appwriteService.uploadFile(data.image[0]);
-
-                    if (file && post.featuredImage) {
-                        await appwriteService.deleteFile(post.featuredImage);
-                    }
+            return await this.databases.createDocument(
+                this.getDatabaseId(),
+                this.getCollectionId(),
+                slug,
+                {
+                    title,
+                    content,
+                    featuredImage,
+                    status,
+                    userId,
                 }
-
-                const dbPost = await appwriteService.updatePost(
-                    post.$id,
-                    {
-                        ...data,
-                        featuredImage: file ? file.$id : post.featuredImage,
-                    }
-                );
-
-                if (dbPost) {
-                    navigate(`/post/${dbPost.$id}`);
-                }
-            } else {
-                // CREATE NEW POST
-                const imageFile = data.image?.[0] ? data.image[0] : null;
-
-                if (!imageFile) {
-                    alert("Please select a featured image.");
-                    return;
-                }
-
-                const file = await appwriteService.uploadFile(imageFile);
-
-                if (file) {
-                    const fileId = file.$id;
-                    data.featuredImage = fileId;
-
-                    const dbPost = await appwriteService.createPost({
-                        ...data,
-                        slug: data.slug || slugTransform(data.title),
-                        userId: userData?.$id,
-                    });
-
-                    if (dbPost) {
-                        navigate(`/post/${dbPost.$id}`);
-                    }
-                }
-            }
+            );
         } catch (error) {
-            console.error("PostForm :: submit :: error", error);
+            console.error("Appwrite service :: createPost :: error", error);
+            return false;
         }
-    };
+    }
 
-    const slugTransform = useCallback((value) => {
-        if (value && typeof value === "string") {
-            return value
-                .trim()
-                .toLowerCase()
-                .replace(/[^a-zA-Z\d\s]+/g, "-")
-                .replace(/\s+/g, "-");
+    async updatePost(slug, { title, content, featuredImage, status }) {
+        try {
+            return await this.databases.updateDocument(
+                this.getDatabaseId(),
+                this.getCollectionId(),
+                slug,
+                {
+                    title,
+                    content,
+                    featuredImage,
+                    status,
+                }
+            );
+        } catch (error) {
+            console.error("Appwrite service :: updatePost :: error", error);
+            return false;
         }
-        return '';
-    }, []);
+    }
 
-    React.useEffect(() => {
-        const subscription = watch((value, { name }) => {
-            if (name === 'title') {
-                setValue('slug', slugTransform(value.title), { shouldValidate: true });
+    async deletePost(slug) {
+        try {
+            await this.databases.deleteDocument(
+                this.getDatabaseId(),
+                this.getCollectionId(),
+                slug
+            );
+            return true;
+        } catch (error) {
+            console.error("Appwrite service :: deletePost :: error", error);
+            return false;
+        }
+    }
+
+    async getPost(slug) {
+        try {
+            return await this.databases.getDocument(
+                this.getDatabaseId(),
+                this.getCollectionId(),
+                slug
+            );
+        } catch (error) {
+            console.error("Appwrite service :: getPost :: error", error);
+            return false;
+        }
+    }
+
+    async getPosts(queries = [Query.equal("status", "active")]) {
+        try {
+            return await this.databases.listDocuments(
+                this.getDatabaseId(),
+                this.getCollectionId(),
+                queries
+            );
+        } catch (error) {
+            console.error("Appwrite service :: getPosts :: error", error);
+            return false;
+        }
+    }
+
+    async getPostforHome(userId, queries = [Query.equal("status", "active")]) {
+        try {
+            const finalQueries = [...queries, Query.equal("userId", userId)];
+            return await this.databases.listDocuments(
+                this.getDatabaseId(),
+                this.getCollectionId(),
+                finalQueries
+            );
+        } catch (error) {
+            console.error("Appwrite service :: getPostforHome :: error", error);
+            return false;
+        }
+    }
+
+    // Storage methods
+    async uploadFile(file) {
+        try {
+            const actualFile = (file && file[0]) ? file[0] : file;
+
+            if (!actualFile) {
+                console.error("Appwrite service :: uploadFile :: No valid file provided");
+                return false;
             }
-        });
 
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [watch, slugTransform, setValue]);
+            return await this.bucket.createFile(
+                this.getBucketId(),
+                ID.unique(),
+                actualFile
+            );
+        } catch (error) {
+            console.error("Appwrite service :: uploadFile :: error", error);
+            return false;
+        }
+    }
 
-    return (
-        <form onSubmit={handleSubmit(submit)} className="flex flex-wrap p-4">
-            <div className="w-2/3 px-2">
-                <Input
-                    label="Title :"
-                    placeholder="Title"
-                    className="mb-4"
-                    {...register("title", { required: true })}
-                />
-                <Input
-                    label="Slug :"
-                    placeholder="Slug"
-                    className="mb-4"
-                    {...register("slug", { required: true })}
-                    onInput={(e) => {
-                        setValue("slug", slugTransform(e.currentTarget.value), { shouldValidate: true });
-                    }}
-                />
-                <RTE label="Content :" name="content" control={control} defaultValue={getValues("content")} />
-            </div>
-            <div className="w-1/3 px-2">
-                <Input
-                    label="Featured Image :"
-                    type="file"
-                    className="mb-4"
-                    accept="image/png, image/jpg, image/jpeg, image/gif"
-                    {...register("image", { required: !post })}
-                />
-                {post && post.featuredImage && (
-                    <div className="w-full mb-4">
-                        <img
-                            src={appwriteService.getFilePreview(post.featuredImage)}
-                            alt={post.title}
-                            className="rounded-lg w-full object-cover"
-                        />
-                    </div>
-                )}
-                <Select
-                    options={["active", "inactive"]}
-                    label="Status"
-                    className="mb-4"
-                    {...register("status", { required: true })}
-                />
-                <Button type="submit" bgColor={post ? "bg-green-500" : undefined} className="w-full">
-                    {post ? "Update" : "Submit"}
-                </Button>
-            </div>
-        </form>
-    );
+    async deleteFile(fileId) {
+        try {
+            if (!fileId) return true;
+            await this.bucket.deleteFile(
+                this.getBucketId(),
+                fileId
+            );
+            return true;
+        } catch (error) {
+            console.warn("Appwrite service :: deleteFile :: File not found or already deleted", error);
+            return false;
+        }
+    }
+
+    getFilePreview(fileId) {
+        try {
+            if (!fileId) return "";
+            const previewUrl = this.bucket.getFilePreview(
+                this.getBucketId(),
+                fileId
+            );
+            return typeof previewUrl === "string" ? previewUrl : previewUrl.href;
+        } catch (error) {
+            console.error("Appwrite service :: getFilePreview :: error", error);
+            return "";
+        }
+    }
 }
+
+const service = new Service();
+export default service;
