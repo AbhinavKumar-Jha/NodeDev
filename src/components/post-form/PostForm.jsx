@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button, Input, Select, RTE } from '../index.js';
-import appwriteService from "../../appwrite/config.service"; // Ensure file name matches your project
+import appwriteService from "../../appwrite/config.service";
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
@@ -22,11 +22,14 @@ export default function PostForm({ post }) {
     const submit = async (data) => {
         try {
             if (post) {
-                // EDIT MODE
-                const file = data.image?.[0] ? await appwriteService.uploadFile(data.image[0]) : null;
+                // UPDATE EXISTING POST
+                let file = null;
+                if (data.image?.[0]) {
+                    file = await appwriteService.uploadFile(data.image[0]);
 
-                if (file && post.featuredImage) {
-                    await appwriteService.deleteFile(post.featuredImage);
+                    if (file && post.featuredImage) {
+                        await appwriteService.deleteFile(post.featuredImage);
+                    }
                 }
 
                 const dbPost = await appwriteService.updatePost(
@@ -41,8 +44,9 @@ export default function PostForm({ post }) {
                     navigate(`/post/${dbPost.$id}`);
                 }
             } else {
-                // CREATE MODE
+                // CREATE NEW POST
                 const imageFile = data.image?.[0] ? data.image[0] : null;
+
                 if (!imageFile) {
                     alert("Please select a featured image.");
                     return;
@@ -84,7 +88,6 @@ export default function PostForm({ post }) {
     React.useEffect(() => {
         const subscription = watch((value, { name }) => {
             if (name === 'title') {
-                // FIXED: Option object passed to setValue correctly as 3rd parameter
                 setValue('slug', slugTransform(value.title), { shouldValidate: true });
             }
         });
@@ -122,12 +125,12 @@ export default function PostForm({ post }) {
                     accept="image/png, image/jpg, image/jpeg, image/gif"
                     {...register("image", { required: !post })}
                 />
-                {post && (
+                {post && post.featuredImage && (
                     <div className="w-full mb-4">
                         <img
                             src={appwriteService.getFilePreview(post.featuredImage)}
                             alt={post.title}
-                            className="rounded-lg"
+                            className="rounded-lg w-full object-cover"
                         />
                     </div>
                 )}
