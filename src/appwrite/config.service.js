@@ -170,18 +170,19 @@ export class Service {
     }
 
     getFilePreview(fileId) {
-    try {
-        if (!fileId || fileId === "undefined" || fileId === "null") return "";
-        
-        // getFileView provides the direct public image URL string
-        const previewUrl = this.bucket.getFileView(
-            this.getBucketId(),
-            fileId
-        );
-        return typeof previewUrl === "string" ? previewUrl : previewUrl.href;
-    } catch (error) {
-        console.error("Appwrite service :: getFilePreview :: error", error);
-        return "";
+        try {
+            if (!fileId || fileId === "undefined" || fileId === "null") return "";
+            
+            const previewUrl = this.bucket.getFileView(
+                this.getBucketId(),
+                fileId
+            );
+
+            return typeof previewUrl === "string" ? previewUrl : previewUrl.href;
+        } catch (error) {
+            console.error("Appwrite service :: getFilePreview :: error", error);
+            return "";
+        }
     }
 }
 
