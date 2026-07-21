@@ -4,6 +4,7 @@ import { Button, Input, Select, RTE } from '../index.js';
 import appwriteService from "../../appwrite/config.service";
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { ID } from 'appwrite';
 
 export default function PostForm({ post }) {
     const userData = useSelector((state) => state.auth.userData);
@@ -21,9 +22,11 @@ export default function PostForm({ post }) {
 
     const submit = async (data) => {
         try {
+            // Strictly check for post.$id to determine edit vs create mode
             const isEditMode = Boolean(post && post.$id);
 
             if (isEditMode) {
+                // UPDATE EXISTING POST
                 let file = null;
                 if (data.image?.[0]) {
                     file = await appwriteService.uploadFile(data.image[0]);
@@ -45,6 +48,7 @@ export default function PostForm({ post }) {
                     navigate(`/post/${dbPost.$id}`);
                 }
             } else {
+                // CREATE NEW POST
                 const imageFile = data.image?.[0] ? data.image[0] : null;
 
                 if (!imageFile) {
@@ -58,9 +62,12 @@ export default function PostForm({ post }) {
                     const fileId = file.$id;
                     data.featuredImage = fileId;
 
+                    // Ensure document ID/slug is unique to prevent 409 Conflict errors
+                    const targetSlug = data.slug || slugTransform(data.title) || ID.unique();
+
                     const dbPost = await appwriteService.createPost({
                         ...data,
-                        slug: data.slug || slugTransform(data.title),
+                        slug: targetSlug,
                         userId: userData?.$id,
                     });
 
