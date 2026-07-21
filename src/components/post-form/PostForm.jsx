@@ -22,7 +22,6 @@ export default function PostForm({ post }) {
     const submit = async (data) => {
         try {
             if (post) {
-                // UPDATE EXISTING POST
                 let file = null;
                 if (data.image?.[0]) {
                     file = await appwriteService.uploadFile(data.image[0]);
@@ -44,7 +43,6 @@ export default function PostForm({ post }) {
                     navigate(`/post/${dbPost.$id}`);
                 }
             } else {
-                // CREATE NEW POST
                 const imageFile = data.image?.[0] ? data.image[0] : null;
 
                 if (!imageFile) {
@@ -61,7 +59,7 @@ export default function PostForm({ post }) {
                     const dbPost = await appwriteService.createPost({
                         ...data,
                         slug: data.slug || slugTransform(data.title),
-                        userId: userData.$id,
+                        userId: userData?.$id,
                     });
 
                     if (dbPost) {
