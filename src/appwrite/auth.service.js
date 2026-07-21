@@ -6,13 +6,22 @@ export class AuthService {
     account;
 
     constructor() {
-        const endpoint = (conf.appwriteUrl && conf.appwriteUrl !== "undefined")
-            ? conf.appwriteUrl
-            : "https://nyc.cloud.appwrite.io/v1";
+        // Fallback safety check
+        let endpoint = conf.appwriteUrl;
+        if (!endpoint || endpoint === "undefined" || !endpoint.startsWith("http")) {
+            endpoint = "https://nyc.cloud.appwrite.io/v1";
+        }
+
+        let projectId = conf.appwriteProjectId;
+        if (!projectId || projectId === "undefined") {
+            projectId = "6a5f15af00289a0a1221";
+        }
+
+        console.log("Initializing Appwrite Auth with Endpoint:", endpoint, "and Project ID:", projectId);
 
         this.client
             .setEndpoint(endpoint)
-            .setProject(conf.appwriteProjectId || "6a5f15af00289a0a1221");
+            .setProject(projectId);
 
         this.account = new Account(this.client);
     }
