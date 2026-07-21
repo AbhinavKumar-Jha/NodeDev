@@ -15,7 +15,7 @@ export default function RTE({
     // tracking field for onChange
     render={({field :{onChange}})=>(
         <Editor
-        apiKey='o4lv0i6koqnwp5wm3hqow018mtt5z6obs9xrl3psf2cccxe5'
+        apiKey='zovh9qsobhrje1lwi5pys5rpt61ut2vhnft9ppaohpn4qigy' // 👈 Updated with your key
         initialValue={defaultValue}
         init={{
             initialValue: defaultValue,
@@ -28,7 +28,6 @@ export default function RTE({
                 "autolink",
                 "lists",
                 "link",
-                "image",
                 "charmap",
                 "preview",
                 "anchor",
@@ -39,13 +38,11 @@ export default function RTE({
                 "insertdatetime",
                 "media",
                 "table",
-                "code",
                 "help",
                 "wordcount",
-                "anchor",
             ],
             toolbar:
-            "undo redo | blocks | image | bold italic forecolor | alignleft aligncenter bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent |removeformat | help",
+            "undo redo | blocks | image | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help",
             content_style: "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }"
         }}
         onEditorChange={onChange}
