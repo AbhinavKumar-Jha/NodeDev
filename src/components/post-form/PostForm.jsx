@@ -21,7 +21,9 @@ export default function PostForm({ post }) {
 
     const submit = async (data) => {
         try {
-            if (post) {
+            const isEditMode = Boolean(post && post.$id);
+
+            if (isEditMode) {
                 let file = null;
                 if (data.image?.[0]) {
                     file = await appwriteService.uploadFile(data.image[0]);
@@ -121,7 +123,7 @@ export default function PostForm({ post }) {
                     type="file"
                     className="mb-4"
                     accept="image/png, image/jpg, image/jpeg, image/gif"
-                    {...register("image", { required: !post })}
+                    {...register("image", { required: !post?.$id })}
                 />
                 {post && post.featuredImage && (
                     <div className="w-full mb-4">
@@ -138,8 +140,8 @@ export default function PostForm({ post }) {
                     className="mb-4"
                     {...register("status", { required: true })}
                 />
-                <Button type="submit" bgColor={post ? "bg-green-500" : undefined} className="w-full">
-                    {post ? "Update" : "Submit"}
+                <Button type="submit" bgColor={post?.$id ? "bg-green-500" : undefined} className="w-full">
+                    {post?.$id ? "Update" : "Submit"}
                 </Button>
             </div>
         </form>
